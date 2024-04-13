@@ -9,6 +9,7 @@ import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.Chunk;
+import org.springframework.batch.item.json.JsonItemReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -97,28 +98,33 @@ public class ConfigureJob {
 	@Bean
 	public Step chunkStepTwo() {
 		return new StepBuilder(Constants.CSV_TO_XML+"ChunkStep", jobRepository)
-				.chunk(3,transactionManager)
+				.<Map<String, Object>, Map<String, Object>>chunk(3,transactionManager)
+				.reader(reader.flatFileItemReader(null))
 				.build();
 	}
 	
 	@Bean
 	public Step chunkStepThree() {
 		return new StepBuilder(Constants.XML_TO_CSV+"ChunkStep", jobRepository)
-				.chunk(3,transactionManager)
+				.<Map<String, Object>, Map<String, Object>>chunk(3,transactionManager)
+				.reader(reader.xmlItemReader(null))
 				.build();
 	}
 	
 	@Bean
 	public Step chunkStepFour() {
 		return new StepBuilder(Constants.XML_TO_JSON+"ChunkStep", jobRepository)
-				.chunk(3,transactionManager)
+				.<Map<String, Object>, Map<String, Object>>chunk(3,transactionManager)
+				.reader(reader.xmlItemReader(null))
+				.writer(writer.jsonFileItemWriter())
 				.build();
 	}
 	
 	@Bean
 	public Step chunkStepFive() {
 		return new StepBuilder(Constants.JSON_TO_CSV+"ChunkStep", jobRepository)
-				.chunk(3,transactionManager)
+				.<Map<String, Object>, Map<String, Object>>chunk(3,transactionManager)
+				.reader(reader.jsonItemReader(null))
 				.build();
 	}
 	
@@ -126,7 +132,7 @@ public class ConfigureJob {
 	@Bean
 	public Step chunkStepSix() {
 		return new StepBuilder(Constants.JSON_TO_XML+"ChunkStep", jobRepository)
-				.chunk(3,transactionManager)
+				.<Map<String, Object>, Map<String, Object>>chunk(3,transactionManager)
 				.build();
 	}
 
