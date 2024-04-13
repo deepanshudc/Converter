@@ -47,11 +47,20 @@ public class WriterBatch {
 	
 	@Bean
 	@StepScope
-	public FlatFileItemWriter<Map<String, Object>> flatFileItemWriter(@Value("#{jobParameters['outputFile']}") String path) {
+	public FlatFileItemWriter<Map<String, Object>> flatFileItemWriter() {
+		
+		  File tempFile;
+		  
+		try {
+	        tempFile = File.createTempFile("temp", ".json");
+	    } catch (IOException e) {
+	        throw new RuntimeException("Unable to create temporary file", e);
+	    }
+		
 	    FlatFileItemWriter<Map<String, Object>> flatFileItemWriter = new FlatFileItemWriter<>();
 
 	    // Set the resource
-	    flatFileItemWriter.setResource(new PathResource(path));
+	    flatFileItemWriter.setResource((WritableResource) tempFile);
 
 	    // Create a list to hold the keys
 	    List<String> keys = new ArrayList<>();
@@ -83,5 +92,8 @@ public class WriterBatch {
 	}
 
 
+	
+	//xml writer
+	
 
 }
