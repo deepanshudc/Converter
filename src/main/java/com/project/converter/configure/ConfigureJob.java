@@ -4,6 +4,11 @@ import java.util.Map;
 
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.JobRegistry;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.configuration.support.JobRegistryBeanPostProcessor;
+import org.springframework.batch.core.configuration.support.MapJobRegistry;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
@@ -17,9 +22,10 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 import com.project.converter.constants.Constants;
 import com.project.converter.reader.Reader;
-import com.project.converter.writer.Writer;
+import com.project.converter.writer.WriterBatch;
 
 @Configuration
+@EnableBatchProcessing
 public class ConfigureJob {
 
 	
@@ -33,8 +39,21 @@ public class ConfigureJob {
 	private Reader reader;
 	
 	@Autowired
-	private Writer writer;
+	private WriterBatch writer;
 	
+	
+	
+	  @Bean
+	    public JobRegistry jobRegistry() {
+	        return new MapJobRegistry();
+	    }
+
+	    @Bean
+	    public JobRegistryBeanPostProcessor jobRegistryBeanPostProcessor(JobRegistry jobRegistry) {
+	        JobRegistryBeanPostProcessor postProcessor = new JobRegistryBeanPostProcessor();
+	        postProcessor.setJobRegistry(jobRegistry);
+	        return postProcessor;
+	    }
 	
 	
 	@Bean
@@ -92,6 +111,8 @@ public class ConfigureJob {
 				.<Map<String, Object>, Map<String, Object>>chunk(3,transactionManager)
 				.reader(reader.flatFileItemReader(null))
 				.writer(writer.jsonFileItemWriter())
+				.faultTolerant()
+				.skip(NullPointerException.class)
 				.build();
 	}
 	
@@ -100,6 +121,7 @@ public class ConfigureJob {
 		return new StepBuilder(Constants.CSV_TO_XML+"ChunkStep", jobRepository)
 				.<Map<String, Object>, Map<String, Object>>chunk(3,transactionManager)
 				.reader(reader.flatFileItemReader(null))
+				.writer(writer.flatFileItemWriterForXml())
 				.build();
 	}
 	
@@ -108,6 +130,7 @@ public class ConfigureJob {
 		return new StepBuilder(Constants.XML_TO_CSV+"ChunkStep", jobRepository)
 				.<Map<String, Object>, Map<String, Object>>chunk(3,transactionManager)
 				.reader(reader.xmlItemReader(null))
+				.writer(writer.flatFileItemWriter())
 				.build();
 	}
 	
@@ -125,6 +148,7 @@ public class ConfigureJob {
 		return new StepBuilder(Constants.JSON_TO_CSV+"ChunkStep", jobRepository)
 				.<Map<String, Object>, Map<String, Object>>chunk(3,transactionManager)
 				.reader(reader.jsonItemReader(null))
+				.writer(writer.flatFileItemWriter())
 				.build();
 	}
 	
@@ -133,6 +157,8 @@ public class ConfigureJob {
 	public Step chunkStepSix() {
 		return new StepBuilder(Constants.JSON_TO_XML+"ChunkStep", jobRepository)
 				.<Map<String, Object>, Map<String, Object>>chunk(3,transactionManager)
+				.reader(reader.jsonItemReader(null))
+				.writer(writer.flatFileItemWriterForXml())
 				.build();
 	}
 
