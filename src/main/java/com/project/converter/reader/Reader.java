@@ -25,8 +25,12 @@ import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.batch.item.json.JacksonJsonObjectReader;
 import org.springframework.batch.item.json.JsonItemReader;
 import org.springframework.batch.item.xml.StaxEventItemReader;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Scope;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.PathResource;
 import org.springframework.oxm.UncategorizedMappingException;
 import org.springframework.oxm.Unmarshaller;
@@ -35,20 +39,25 @@ import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindException;
 
+import com.project.converter.constants.JobParameterUtils;
+
 
 
 @Component
 public class Reader {
 	
 	
+		
 	//csv reader
 	
-	@Bean
-	public FlatFileItemReader<Map<String,Object>> flatFileItemReader(@Value("#{jobParameters['filePath']}" )String pathToFile){
-		
-		FlatFileItemReader<Map<String,Object>> flatFileItemReader=new FlatFileItemReader<Map<String,Object>>();
-		flatFileItemReader.setResource(new PathResource(pathToFile));
 
+	@Bean
+	@StepScope
+	public FlatFileItemReader<Map<String,Object>> flatFileItemReader(@Value("#{jobParameters['filePath']['value']}" )String pathToFile){
+		
+			 System.out.println("[inside reader class] Flat file path: " + pathToFile); 
+		
+		
 		    // Create an anonymous class implementing FieldSetMapper
 		    FieldSetMapper<Map<String, Object>> fieldSetMapper = new FieldSetMapper<Map<String, Object>>() {
 		        @Override
@@ -73,14 +82,23 @@ public class Reader {
 				
 		    };
 
+		    DynamicFlatFileItemReader flatFileItemReaderDyn = new DynamicFlatFileItemReader(fieldSetMapper);
+
 		    // Use DefaultLineMapper parameterized with Map<String, Object>
 		    DefaultLineMapper<Map<String, Object>> defaultLineMapper = new DefaultLineMapper<>();
-		    defaultLineMapper.setLineTokenizer(new DelimitedLineTokenizer()); // Use DelimitedLineTokenizer
 		    defaultLineMapper.setFieldSetMapper(fieldSetMapper);
 
-		    flatFileItemReader.setLineMapper(defaultLineMapper);
+		    flatFileItemReaderDyn.setLineMapper(defaultLineMapper);
+		    if(pathToFile!=null) {
+		    try {
+		    	flatFileItemReaderDyn.setResource(new FileSystemResource(pathToFile));
+				System.out.println("[insid reader]setting resource : "+pathToFile);
+			    } catch (Exception e) {
+			     System.out.println("[inside reader class]:Error setting resource: " + e.getMessage());
+			    }
+			}
 
-		    return flatFileItemReader;
+		    return flatFileItemReaderDyn;
 		}
 	
 	//json reader
@@ -89,9 +107,14 @@ public class Reader {
 	public JsonItemReader<Map<String, Object>> jsonItemReader(@Value("#{jobParameters['filePath']}" )String pathToFile) {
 
 	    JsonItemReader<Map<String, Object>> jsonItemReader = new JsonItemReader<>();
-
-	    jsonItemReader.setResource(new PathResource(pathToFile));
-
+	    if(pathToFile!=null){
+	    	 try {
+	 		    jsonItemReader.setResource(new PathResource(pathToFile));
+	 		    } catch (Exception e) {
+	 		        System.out.println("Error setting resource: " + e.getMessage());
+	 		    }
+	    }
+	  
 	    // Use JacksonJsonObjectReader with Map<String, Object>
 	    jsonItemReader.setJsonObjectReader(new JacksonJsonObjectReader<>(Map.class));
 
@@ -102,9 +125,17 @@ public class Reader {
 	//xml reader
 	
 	    @Bean
+	    @StepScope
 	    public StaxEventItemReader<Map<String, Object>> xmlItemReader(@Value("#{jobParameters['filePath']}" )String pathToFile) {
 	        StaxEventItemReader<Map<String, Object>> reader = new StaxEventItemReader<>();
+	        if(pathToFile!=null) {
+	        	
+	        try {
 	        reader.setResource(new PathResource(pathToFile));
+		    } catch (Exception e) {
+		        System.out.println("Error setting resource: " + e.getMessage());
+		    }
+	        }
 	        reader.setUnmarshaller(customUnmarshaller());
 
 	        return reader;
@@ -176,6 +207,8 @@ public class Reader {
 				}	
 	        };
 	    }
+	    
+	    
 	}
 	
 
