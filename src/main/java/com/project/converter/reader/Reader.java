@@ -104,7 +104,10 @@ public class Reader {
 	//json reader
 	@Bean
 	@StepScope
-	public JsonItemReader<Map<String, Object>> jsonItemReader(@Value("#{jobParameters['filePath']}" )String pathToFile) {
+	public JsonItemReader<Map<String, Object>> jsonItemReader(@Value("#{jobParameters['filePath']['value'}" )String pathToFile) {
+		
+		 System.out.println("[inside reader class] JSon reader file path: " + pathToFile); 
+
 
 	    JsonItemReader<Map<String, Object>> jsonItemReader = new JsonItemReader<>();
 	    if(pathToFile!=null){

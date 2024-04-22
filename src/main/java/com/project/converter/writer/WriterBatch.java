@@ -1,14 +1,14 @@
 package com.project.converter.writer;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.stream.Collectors;
 
 import javax.lang.model.element.Element;
 import javax.xml.parsers.DocumentBuilder;
@@ -20,7 +20,6 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.springframework.batch.core.JobParameter;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.item.file.FlatFileHeaderCallback;
 import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
 import org.springframework.batch.item.file.transform.FieldExtractor;
@@ -41,13 +40,13 @@ public class WriterBatch {
 	
 	// json item writer
 	@Bean
-	@Lazy
+	@StepScope
 	public JsonFileItemWriter<Map<String,Object>> jsonFileItemWriter() {
 				  File convertedFile;
 	    try {
             long timeStamp = System.currentTimeMillis(); // Generate timestamp
 
-	    	 convertedFile= new File("F:\\convertFile\\convertedsFile"+timeStamp+".json");
+	    	 convertedFile= new File("F:\\convertFile\\convertedJson"+timeStamp+".json");
 	    	if (convertedFile.createNewFile()) {
 	    	    System.out.println("File created: " + convertedFile.getName());
 	    	} else {
@@ -76,7 +75,7 @@ public class WriterBatch {
 		  try {
 	            long timeStamp = System.currentTimeMillis(); // Generate timestamp
 
-		    	 convertedFile= new File("F:\\convertFile\\convertedsFile"+timeStamp+".json");
+		    	 convertedFile= new File("F:\\convertFile\\convertedCSV"+timeStamp+".csv");
 		    	if (convertedFile.createNewFile()) {
 		    	    System.out.println("File created: " + convertedFile.getName());
 		    	} else {
@@ -95,8 +94,11 @@ public class WriterBatch {
 
 	    // Create a list to hold the keys
 	    List<String> keys = new ArrayList<>();
+	    
+
 
 	    // Set the line aggregator
+	    
 	    flatFileItemWriter.setLineAggregator(new DelimitedLineAggregator<Map<String, Object>>() {
 	        {
 	            setDelimiter(",");
@@ -105,20 +107,27 @@ public class WriterBatch {
 	                public Object[] extract(Map<String, Object> item) {
 	                    if (keys.isEmpty()) {
 	                        keys.addAll(item.keySet());
-	                    }
-	                    return item.values().toArray(new Object[0]);
-	                }
-	            });
-	        }
-	    });
+                List<String> header  =keys.stream().map(key -> key.substring(0, 1).toUpperCase() + key.substring(1)).collect(Collectors.toList());
+	                    
+	                        
+	                       // Write headers to file
+	                               try (BufferedWriter writer = new BufferedWriter(new FileWriter(convertedFile, true))) {
+	                                    writer.write(String.join(",", header));
+	                                    writer.newLine();
+	                                } catch (IOException e) {
+	                                    throw new RuntimeException("Unable to write headers", e);
+	                                }
+	                            }
 
-	    // Set the header callback
-	    flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
-	        @Override
-	        public void writeHeader( Writer writer) throws IOException {
-	            writer.write(String.join(",", keys));
+	                            return item.values().toArray(new Object[0]);
+	                        }
+	            });
+
+	            
 	        }
-	    });
+	            });
+	        
+	      
 	    return flatFileItemWriter;
 	}
 
